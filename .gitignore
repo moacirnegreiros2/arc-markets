@@ -1,0 +1,41 @@
+# Node
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+dist/
+
+# Env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Foundry
+packages/contracts/out/
+packages/contracts/cache/
+packages/contracts/broadcast/*/
+packages/contracts/coverage/
+lcov.info
+
+# Misc
+.DS_Store
+*.log
+.vercel
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Deployment artifacts (keep arc-testnet.json but not private keys)
+# .env contains private keys — never commit
