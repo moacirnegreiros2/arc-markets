@@ -54,6 +54,9 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("ending");
   const [visible, setVisible] = useState(20);
+  // Status tab: "live" = only open markets, "all" = include resolved.
+  // Default is "live" so the home leads with what people can actually trade.
+  const [statusTab, setStatusTab] = useState<"live" | "endingSoon" | "all">("live");
 
   // Single fetch — server multicalls all 80 markets, returns cached JSON.
   const { data, isLoading } = useQuery<ApiResponse>({
@@ -75,7 +78,7 @@ export default function HomePage() {
   // Reset pagination when filters change.
   useEffect(() => {
     setVisible(20);
-  }, [category, search, sort]);
+  }, [category, search, sort, statusTab]);
 
   // Sort, then filter
   const sortedAndFiltered = useMemo(() => {
@@ -93,13 +96,32 @@ export default function HomePage() {
     } else {
       list.reverse(); // newest = factory registry order reversed
     }
+    const now = BigInt(Math.floor(Date.now() / 1000));
+    const in24h = now + 86_400n;
     return list.filter((m) => {
+      if (statusTab === "live" && m.state !== 0) return false;
+      if (statusTab === "endingSoon") {
+        if (m.state !== 0) return false;
+        if (m.tradingDeadline > in24h) return false;
+      }
       if (category !== "All" && categorize(m.question) !== category) return false;
       if (search && !m.question.toLowerCase().includes(search.toLowerCase()))
         return false;
       return true;
     });
-  }, [markets, sort, category, search]);
+  }, [markets, sort, category, search, statusTab]);
+
+  const tabCounts = useMemo(() => {
+    const now = BigInt(Math.floor(Date.now() / 1000));
+    const in24h = now + 86_400n;
+    return {
+      live: markets.filter((m) => m.state === 0).length,
+      endingSoon: markets.filter(
+        (m) => m.state === 0 && m.tradingDeadline <= in24h,
+      ).length,
+      all: markets.length,
+    };
+  }, [markets]);
 
   const counts = useMemo(() => {
     const c: Partial<Record<Category, number>> = { All: markets.length };
@@ -175,6 +197,35 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Status tabs — Live is the default so the home leads with actionable
+          markets instead of the resolved backlog. */}
+      <div className="flex items-center gap-1 border-b border-[var(--color-border-1)]">
+        {[
+          { key: "live" as const, label: "Live", count: tabCounts.live },
+          {
+            key: "endingSoon" as const,
+            label: "Ending in 24h",
+            count: tabCounts.endingSoon,
+          },
+          { key: "all" as const, label: "All", count: tabCounts.all },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setStatusTab(t.key)}
+            className={`px-4 py-2 text-sm border-b-2 -mb-px transition-colors ${
+              statusTab === t.key
+                ? "border-[var(--color-accent)] text-[var(--color-text-primary)]"
+                : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+            }`}
+          >
+            {t.label}
+            <span className="ml-1.5 text-xs text-[var(--color-text-muted)] mono">
+              {t.count}
+            </span>
+          </button>
+        ))}
+      </div>
 
       <MarketFilters
         selected={category}

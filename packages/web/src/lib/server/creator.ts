@@ -35,6 +35,15 @@ export function slotKeyFromQuestion(q: string): string | null {
   // etfDaily
   m = q.match(/^Will\s+(SPY|QQQ|DIA)\s+close above\s+\$?[\d.]+\s+on\s+(\d{4}-\d{2}-\d{2})\?$/i);
   if (m) return `etfDaily|${m[1].toUpperCase()}|${m[2]}`;
+  // bigTechDaily (same shape as etfDaily but for individual tickers)
+  m = q.match(/^Will\s+(NVDA|TSLA|COIN|MSTR)\s+close above\s+\$?[\d.]+\s+on\s+(\d{4}-\d{2}-\d{2})\?$/i);
+  if (m) return `stockClose|${m[1].toUpperCase()}|${m[2]}`;
+  // btcDominanceWeekly
+  m = q.match(/^Will\s+Bitcoin\s+dominance\s+be\s+above\s+(\d+)%\s+on\s+(\d{4}-\d{2}-\d{2})\?$/i);
+  if (m) return `btcDominance|${m[1]}|${m[2]}`;
+  // hottestYearAnnual
+  m = q.match(/^Will\s+(\d{4})\s+be\s+the\s+hottest\s+year\s+on\s+record\s+per\s+NASA\s+GISS\?$/i);
+  if (m) return `hottestYear|${m[1]}`;
   return null;
 }
 
@@ -288,12 +297,93 @@ const etfDaily: Template = async (now) => {
   return out;
 };
 
+// Rolling big-tech close — next 1 trading day. Uses the existing stockClose
+// resolver (Yahoo Finance) but broadens variety beyond ETFs.
+const bigTechDaily: Template = async (now) => {
+  const days = nextTradingDays(now, 1);
+  const out: MarketSpec[] = [];
+  const tickers = ["NVDA", "TSLA", "COIN", "MSTR"];
+  const closes: Record<string, number | null> = {};
+  for (const ticker of tickers) {
+    const c = await latestClose(ticker);
+    closes[ticker] = c?.close ?? null;
+  }
+  for (const day of days) {
+    const tradingDeadline = BigInt(Math.floor(day.getTime() / 1000));
+    const resolutionDeadline = tradingDeadline + 7200n;
+    const dateIso = fmtIso(day);
+    for (const ticker of tickers) {
+      const close = closes[ticker];
+      if (!close) continue;
+      const threshold = Math.round(close * 1.005 * 10) / 10;
+      out.push({
+        question: `Will ${ticker} close above $${threshold.toFixed(1)} on ${dateIso}?`,
+        description: `${ticker} adjusted daily close on ${dateIso} per Yahoo Finance. Strike ~+0.5% above the latest close at creation time.`,
+        resolutionSource: `Yahoo Finance ${ticker} daily close on ${dateIso}`,
+        tradingDeadline,
+        resolutionDeadline,
+        feeBps: 200,
+        initialLiquidityUsdc: 100_000_000n,
+        slotKey: `stockClose|${ticker}|${dateIso}`,
+      });
+    }
+  }
+  return out;
+};
+
+// Weekly BTC dominance — resolves via CoinGecko /global endpoint.
+const btcDominanceWeekly: Template = async (now) => {
+  const eow = endOfWeekUtc(now);
+  const tradingDeadline = BigInt(Math.floor(eow.getTime() / 1000));
+  const resolutionDeadline = tradingDeadline + 86_400n;
+  // Two markets around a symbolic threshold that doesn't shift wildly.
+  const thresholds = [50, 55];
+  return thresholds.map((threshold) => ({
+    question: `Will Bitcoin dominance be above ${threshold}% on ${fmtIso(eow)}?`,
+    description: `BTC market-cap share of total crypto market on CoinGecko /global at 23:59 UTC on ${fmtIso(eow)}.`,
+    resolutionSource: `CoinGecko /global BTC market-cap percentage on ${fmtIso(eow)}`,
+    tradingDeadline,
+    resolutionDeadline,
+    feeBps: 200,
+    initialLiquidityUsdc: 200_000_000n,
+    slotKey: `btcDominance|${threshold}|${fmtIso(eow)}`,
+  }));
+};
+
+// Annual climate marker — one market per current calendar year, resolves after
+// year-end via NASA GISTEMP. Only creates once (dedup prevents repeat).
+const hottestYearAnnual: Template = async (now) => {
+  const year = now.getUTCFullYear();
+  const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59));
+  // Only start offering the market once we're past H1 so it's tradeable long
+  // enough. Also resolution needs full-year data → ~3-month buffer.
+  const monthsRemaining = (yearEnd.getTime() - now.getTime()) / (86_400_000 * 30);
+  if (monthsRemaining < 1 || monthsRemaining > 8) return [];
+  const tradingDeadline = BigInt(Math.floor(yearEnd.getTime() / 1000));
+  const resolutionDeadline = tradingDeadline + 90n * 86_400n; // +90 days
+  return [
+    {
+      question: `Will ${year} be the hottest year on record per NASA GISS?`,
+      description: `Resolves YES if ${year} ranks #1 in the NASA GISTEMP global-mean annual anomaly ranking after year-end publication.`,
+      resolutionSource: `NASA GISTEMP annual anomaly for ${year}`,
+      tradingDeadline,
+      resolutionDeadline,
+      feeBps: 200,
+      initialLiquidityUsdc: 300_000_000n,
+      slotKey: `hottestYear|${year}`,
+    },
+  ];
+};
+
 const TEMPLATES: Template[] = [
   crypto4h,
   cryptoDailyClose,
   etfDaily,
+  bigTechDaily,
   cryptoWeekly,
   cryptoMonthly,
+  btcDominanceWeekly,
+  hottestYearAnnual,
 ];
 
 export async function planNewMarkets(
