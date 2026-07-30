@@ -89,7 +89,18 @@ async function handler(req: Request) {
   // pool of *pending* ones lives entirely in the recent tail (templates only
   // create near-term markets), so the rest is safe to skip per run.
   const TICK_WINDOW = 800;
-  const allBefore = await listAllMarkets({ limit: TICK_WINDOW });
+  let allBefore;
+  try {
+    allBefore = await listAllMarkets({ limit: TICK_WINDOW });
+  } catch (err) {
+    // Arc RPC is flaky enough that hard-failing here would alert on every
+    // hiccup. Skip this tick cleanly — next run tries again in an hour.
+    return NextResponse.json({
+      checkedAt: now.toISOString(),
+      skipped: true,
+      reason: `market list read failed: ${(err as Error).message.split("\n")[0]}`,
+    });
+  }
   const pending = allBefore.filter((m) => isPendingResolution(m, now));
   const resolveLog: ResolveLog[] = [];
   for (const m of pending) {
@@ -126,7 +137,24 @@ async function handler(req: Request) {
   // --- 2. Create pass (dedup against current on-chain questions) ---
   // Templates only produce markets for near-term dates, so we only need
   // recent existing markets for dedup. Cheaper than re-reading everything.
-  const allAfterResolve = await listAllMarkets({ limit: TICK_WINDOW });
+  // If this read fails we still skip the create pass (no dedup context =
+  // risk of duplicate markets) but return what we managed to resolve.
+  let allAfterResolve;
+  try {
+    allAfterResolve = await listAllMarkets({ limit: TICK_WINDOW });
+  } catch (err) {
+    return NextResponse.json({
+      checkedAt: now.toISOString(),
+      resolved: resolveLog.filter((x) => x.status === "resolved").length,
+      pendingManual: resolveLog.filter((x) => x.status === "manual").length,
+      errors: resolveLog.filter((x) => x.status === "error").length,
+      created: 0,
+      failed: 0,
+      resolveLog,
+      createLog: [],
+      createPassSkipped: `market re-read failed: ${(err as Error).message.split("\n")[0]}`,
+    });
+  }
   const existing = new Set(allAfterResolve.map((m) => m.question));
   const planned = await planNewMarkets(now, existing);
 
