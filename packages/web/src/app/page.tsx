@@ -23,7 +23,12 @@ type ApiMarket = {
   poolNo: string;
   impliedYesProbabilityBps: number;
 };
-type ApiResponse = { fetchedAt: string; count: number; markets: ApiMarket[] };
+type ApiResponse = {
+  fetchedAt: string;
+  count: number;
+  markets: ApiMarket[];
+  rpcError?: string;
+};
 
 // Convert API row → MarketInfo (BigInts back) so MarketCard's existing props work.
 function toMarketInfo(m: ApiMarket): MarketInfo {
@@ -197,6 +202,14 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {data?.rpcError && (
+        <div className="rounded-md border border-[var(--color-border-1)] bg-[var(--color-bg-1)] px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+          <span className="text-[var(--color-accent)] mr-2">⚠</span>
+          Arc RPC is momentarily unavailable — showing cached data if any.
+          The site refreshes every 30s.
+        </div>
+      )}
 
       {/* Status tabs — Live is the default so the home leads with actionable
           markets instead of the resolved backlog. */}

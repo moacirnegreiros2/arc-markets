@@ -97,9 +97,22 @@ export async function GET(req: Request) {
       },
     );
   } catch (err) {
+    // RPC flakiness shouldn't 500 the client — return 200 with empty
+    // markets and an rpcError field so the UI can show a soft banner
+    // instead of a red toast.
     return NextResponse.json(
-      { error: (err as Error).message },
-      { status: 500 },
+      {
+        fetchedAt: new Date().toISOString(),
+        count: 0,
+        markets: [],
+        rpcError: (err as Error).message.split("\n")[0],
+      },
+      {
+        headers: {
+          // Short cache so recovery is fast once RPC is back.
+          "cache-control": "public, s-maxage=10, stale-while-revalidate=30",
+        },
+      },
     );
   }
 }
