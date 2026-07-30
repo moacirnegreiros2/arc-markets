@@ -59,9 +59,22 @@ const SUMMARIES_TTL_MS = 15_000;
 // We keep aggregate3 chunks fat (fewer round-trips) and only add a small
 // sleep between chunks — the RPC itself throttles us anyway. Retries with
 // exponential backoff cover transient "request limit reached" spikes.
-const CHUNK = 50;
+const CHUNK = 30;
+const MIN_CHUNK = 5;
 const SLEEP_MS = 100;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Errors that mean "your batch was too big" — retry the same range with a
+// smaller chunk instead of just backing off.
+function isSizeLimitError(err: unknown): boolean {
+  const msg = (err as Error)?.message ?? "";
+  return (
+    msg.includes("Request exceeds defined limit") ||
+    msg.includes("request limit reached") ||
+    msg.includes("payload too large") ||
+    msg.includes("response size")
+  );
+}
 
 async function chunkedMulticall<T>(
   contracts: readonly {
@@ -73,8 +86,10 @@ async function chunkedMulticall<T>(
   allowFailure: boolean,
 ): Promise<T[]> {
   const out: T[] = [];
-  for (let i = 0; i < contracts.length; i += CHUNK) {
-    const slice = contracts.slice(i, i + CHUNK);
+  let i = 0;
+  let chunk = CHUNK;
+  while (i < contracts.length) {
+    const slice = contracts.slice(i, i + chunk);
     let lastErr: unknown;
     let ok = false;
     for (let attempt = 0; attempt < 4 && !ok; attempt++) {
@@ -88,12 +103,21 @@ async function chunkedMulticall<T>(
         ok = true;
       } catch (err) {
         lastErr = err;
-        // Exponential backoff: 300 → 900 → 2700 ms
+        // Size-limit errors don't get better with retry alone — halve and retry.
+        if (isSizeLimitError(err) && chunk > MIN_CHUNK) {
+          chunk = Math.max(MIN_CHUNK, Math.floor(chunk / 2));
+          break;
+        }
+        // Transient error: exponential backoff.
         await sleep(300 * Math.pow(3, attempt));
       }
     }
-    if (!ok) throw lastErr;
-    if (i + CHUNK < contracts.length) await sleep(SLEEP_MS);
+    if (!ok) {
+      if (isSizeLimitError(lastErr) && chunk > MIN_CHUNK) continue; // retry with smaller chunk
+      throw lastErr;
+    }
+    i += slice.length;
+    if (i < contracts.length) await sleep(SLEEP_MS);
   }
   return out;
 }
