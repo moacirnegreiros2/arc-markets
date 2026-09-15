@@ -15,8 +15,11 @@ export type Category =
 const RULES: { cat: Exclude<Category, "All" | "Other">; keywords: RegExp }[] = [
   {
     cat: "Sports",
+    // "brazil" / "argentina" removed — they collide with political questions
+    // (elections, presidents). World Cup / FIFA / Copa already scope national
+    // teams, and Politics is checked before Sports below when both hit.
     keywords:
-      /\b(world cup|nba|champions league|wimbledon|f1|formula 1|olympics|grand prix|super bowl|drivers championship|copa|fifa|uefa|lakers|verstappen|alcaraz|sinner|argentina|brazil|brasil|real madrid|nfl|mlb|nhl|premier league|la liga|serie a|bundesliga|ballon d'or|us open|french open|australian open|masters|ryder cup|ufc|boxing)\b/i,
+      /\b(world cup|nba|champions league|wimbledon|f1|formula 1|olympics|grand prix|super bowl|drivers championship|copa|fifa|uefa|lakers|verstappen|alcaraz|sinner|real madrid|nfl|mlb|nhl|premier league|la liga|serie a|bundesliga|ballon d'or|us open|french open|australian open|masters|ryder cup|ufc|boxing)\b/i,
   },
   {
     cat: "Politics",
