@@ -43,6 +43,10 @@ const HIDDEN_MARKET_IDS = new Set<string>([
   "0x3793e7c75f2a9dcad6508712112936d26291a2eceefe7e29c961645130f82cab",
   // Real Madrid — eliminated from 2025-26 UEFA Champions League
   "0x6deae5460bdea1860297334457b629be2818a0e30b33cce2ef7d57b0b02948f0",
+  // Sept 2026 batch: two markets got the strike mangled by shell escaping
+  // ("$150k" -> "50k", "$8k" -> "k"). Replaced with correct versions.
+  "0xff518547eb6c67bb08768a78ab5cc688e46b90965187c21562bd0dea878e84dc",
+  "0xd7f4ed34039d1b78d72ce3e2b5846811670997b2d6ae6a42465762bd5bbca08c",
 ]);
 
 export async function GET(req: Request) {
