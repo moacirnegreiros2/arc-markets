@@ -36,7 +36,7 @@ const RULES: { cat: Exclude<Category, "All" | "Other">; keywords: RegExp }[] = [
   {
     cat: "Business",
     keywords:
-      /\b(ipo|acquire|acquisition|coinbase|stripe|earnings|spy|qqq|dia|nvda|tsla|coin|mstr|s&p 500|nasdaq|dow jones|market cap|revenue|guidance|split|dividend|buyback|nike|walmart|amazon|starbucks|delivered)\b/i,
+      /\b(ipo|acquire|acquisition|coinbase|stripe|earnings|spy|qqq|dia|nvda|tsla|coin|mstr|s&p 500|nasdaq|dow jones|market cap|revenue|guidance|split|dividend|buyback|nike|walmart|amazon|starbucks|delivered?|tesla|cybertruck|model 3|model y|shareholder)\b/i,
   },
   {
     cat: "Entertainment",
