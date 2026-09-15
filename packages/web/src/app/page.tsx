@@ -161,24 +161,47 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      {/* Hero / stats strip */}
-      <section className="rounded-2xl border border-[var(--color-border-1)] bg-gradient-to-br from-[var(--color-bg-1)] to-[var(--color-bg-0)] p-6 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-end gap-6">
-          <div className="flex-1">
-            <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent)] mb-2">
-              Prediction markets · Arc Testnet
-            </p>
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight">
+      {/* Hero — inspired by Arc's dark ambient gradient and Circle's clean
+          structure. Grid backdrop + soft dual-tone glow give depth without
+          heavy imagery. */}
+      <section className="relative overflow-hidden rounded-2xl border border-[var(--color-border-1)] bg-[var(--color-bg-1)] p-6 md:p-10">
+        {/* Ambient layers */}
+        <div className="grid-backdrop absolute inset-0 pointer-events-none" />
+        <div
+          className="absolute -top-24 -left-16 w-[420px] h-[420px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, var(--color-accent-glow), transparent 65%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-32 -right-24 w-[520px] h-[520px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, var(--color-warm-glow), transparent 65%)",
+          }}
+        />
+
+        <div className="relative flex flex-col md:flex-row md:items-end gap-8">
+          <div className="flex-1 min-w-0">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[var(--color-bg-2)]/70 border border-[var(--color-border-1)] backdrop-blur-sm">
+              <span className="live-dot" />
+              <span className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">
+                Live on Arc Testnet · Settled in USDC
+              </span>
+            </div>
+            <h1 className="mt-4 text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
               Trade the probability of{" "}
-              <span className="text-[var(--color-accent)]">anything</span>.
+              <span className="text-gradient">anything</span>.
             </h1>
-            <p className="text-[var(--color-text-secondary)] mt-2 max-w-xl">
-              Binary outcomes settled in USDC. CPMM liquidity, on-chain finality
-              in ~2 seconds, no middleman.
+            <p className="text-[var(--color-text-secondary)] mt-3 max-w-xl text-[15px] leading-relaxed">
+              Binary outcomes settled in USDC. On-chain constant-product
+              liquidity, two-second finality, and a resolver that reads from
+              the same public data you do — no middlemen, no promises.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 md:gap-4 md:w-auto w-full">
+          <div className="grid grid-cols-3 gap-3 md:gap-3 md:w-auto w-full">
             {[
               { label: "Markets", value: stats.total.toString() },
               { label: "Open", value: stats.open.toString() },
@@ -189,12 +212,12 @@ export default function HomePage() {
             ].map((s) => (
               <div
                 key={s.label}
-                className="px-4 py-3 rounded-lg bg-[var(--color-bg-2)] border border-[var(--color-border-1)] min-w-[100px]"
+                className="px-4 py-3 rounded-xl bg-[var(--color-bg-2)]/80 border border-[var(--color-border-1)] backdrop-blur-sm min-w-[100px]"
               >
-                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
                   {s.label}
                 </div>
-                <div className="mono tabular-nums text-lg font-semibold mt-0.5">
+                <div className="mono tabular-nums text-xl font-semibold mt-1 text-[var(--color-text-primary)]">
                   {s.value}
                 </div>
               </div>

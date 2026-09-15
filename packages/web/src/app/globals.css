@@ -1,29 +1,47 @@
 @import "tailwindcss";
 
+/*
+ * Palette inspired by (not copied from) Arc and Circle:
+ *  - Deep, cool midnight base — a nod to Arc's dark ecosystem look.
+ *  - Primary accent is a refined electric blue in the same family as USDC's
+ *    #2775CA but shifted brighter and more purple so it isn't the same swatch.
+ *  - Warm ember secondary echoes Arc's amber gradient curves; used sparingly
+ *    for hero atmospherics, never as UI chrome.
+ *  - YES/NO tuned to cooler mint / warmer coral for softer contrast.
+ */
+
 @theme {
-  --color-bg-0: #07090d;
-  --color-bg-1: #0c1015;
-  --color-bg-2: #11161e;
-  --color-bg-3: #181e28;
-  --color-bg-4: #1f2632;
+  --color-bg-0: #08090f;
+  --color-bg-1: #0d1119;
+  --color-bg-2: #131824;
+  --color-bg-3: #1a2030;
+  --color-bg-4: #232a3d;
 
-  --color-border-1: #1c2230;
-  --color-border-2: #262e3c;
+  --color-border-1: #1d2333;
+  --color-border-2: #2a3247;
 
-  --color-text-primary: #e9ecf2;
-  --color-text-secondary: #9aa3b3;
-  --color-text-muted: #5b6473;
+  --color-text-primary: #eef1f7;
+  --color-text-secondary: #9ba5b9;
+  --color-text-muted: #5a6478;
 
-  --color-accent: #36e4c3;
-  --color-accent-dim: #1ba88c;
-  --color-accent-glow: rgba(54, 228, 195, 0.15);
+  /* Primary — refined electric blue (Circle-adjacent, not a copy) */
+  --color-accent: #4c7cff;
+  --color-accent-2: #7d9bff;
+  --color-accent-dim: #2c58d6;
+  --color-accent-glow: rgba(76, 124, 255, 0.18);
 
-  --color-yes: #28d49b;
-  --color-yes-bg: rgba(40, 212, 155, 0.12);
-  --color-yes-border: rgba(40, 212, 155, 0.35);
-  --color-no: #ff5471;
-  --color-no-bg: rgba(255, 84, 113, 0.12);
-  --color-no-border: rgba(255, 84, 113, 0.35);
+  /* Warm ember — sparing accent for hero atmospherics (Arc-adjacent) */
+  --color-warm: #ffa657;
+  --color-warm-dim: #d8823a;
+  --color-warm-glow: rgba(255, 166, 87, 0.18);
+
+  /* YES / NO — cooler mint, warmer coral */
+  --color-yes: #3edc98;
+  --color-yes-bg: rgba(62, 220, 152, 0.10);
+  --color-yes-border: rgba(62, 220, 152, 0.30);
+  --color-no: #ff6b7a;
+  --color-no-bg: rgba(255, 107, 122, 0.10);
+  --color-no-border: rgba(255, 107, 122, 0.30);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -34,10 +52,32 @@ html, body {
   color: var(--color-text-primary);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ambient background — a very subtle two-tone glow: cool blue top-left,
+   warm ember bottom-right. Sits behind everything, evokes an arch. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, rgba(76, 124, 255, 0.10), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 90% 100%, rgba(255, 166, 87, 0.06), transparent 60%);
+  pointer-events: none;
 }
 
 .tabular-nums { font-variant-numeric: tabular-nums; }
 .mono { font-family: var(--font-geist-mono), ui-monospace, monospace; }
+
+/* Utility gradient text used in hero headline */
+.text-gradient {
+  background: linear-gradient(120deg, var(--color-accent) 0%, var(--color-accent-2) 50%, var(--color-warm) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--color-bg-0); }
@@ -45,16 +85,20 @@ html, body {
 ::-webkit-scrollbar-thumb:hover { background: var(--color-bg-4); }
 
 [data-rk] {
-  --rk-colors-modalBackground: #11161e;
-  --rk-colors-modalBorder: #1c2230;
-  --rk-colors-accentColor: #36e4c3;
-  --rk-colors-accentColorForeground: #07090d;
+  --rk-colors-modalBackground: #131824;
+  --rk-colors-modalBorder: #1d2333;
+  --rk-colors-accentColor: #4c7cff;
+  --rk-colors-accentColorForeground: #08090f;
 }
 
 .card-hover {
-  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
-.card-hover:hover { transform: translateY(-1px); border-color: var(--color-border-2); }
+.card-hover:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-2);
+  box-shadow: 0 8px 24px -12px rgba(76, 124, 255, 0.25);
+}
 
 .live-dot::before {
   content: '';
@@ -64,6 +108,16 @@ html, body {
   margin-right: 6px;
   box-shadow: 0 0 8px var(--color-yes);
   vertical-align: middle;
+}
+
+/* Subtle grid backdrop used in hero */
+.grid-backdrop {
+  background-image:
+    linear-gradient(rgba(76, 124, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(76, 124, 255, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 70% 60% at 30% 30%, black, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 30% 30%, black, transparent 75%);
 }
 
 /* Hide spinner on number inputs */

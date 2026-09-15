@@ -16,12 +16,34 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-[var(--color-bg-0)]/85 backdrop-blur-md border-b border-[var(--color-border-1)]">
       <div className="mx-auto max-w-[1400px] px-5 h-14 flex items-center gap-6">
-        <Link href="/" className="flex items-center gap-2 group">
-          <span className="w-7 h-7 rounded-md bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-dim)] grid place-items-center text-[var(--color-bg-0)] font-bold text-sm">
-            ▲
+        <Link href="/" className="flex items-center gap-2.5 group">
+          {/* Custom mark: an arc curve rising into a peak — reads as
+              "prediction" (probability curve) + "arc" (the network). */}
+          <span className="relative w-8 h-8 grid place-items-center">
+            <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-[var(--color-accent)] via-[var(--color-accent-2)] to-[var(--color-warm)] opacity-90" />
+            <span className="absolute inset-[1px] rounded-[7px] bg-[var(--color-bg-0)]" />
+            <svg
+              viewBox="0 0 32 32"
+              className="relative w-5 h-5"
+              fill="none"
+              stroke="url(#markGrad)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            >
+              <defs>
+                <linearGradient id="markGrad" x1="0" y1="32" x2="32" y2="0">
+                  <stop offset="0%" stopColor="var(--color-accent)" />
+                  <stop offset="60%" stopColor="var(--color-accent-2)" />
+                  <stop offset="100%" stopColor="var(--color-warm)" />
+                </linearGradient>
+              </defs>
+              <path d="M5 25 C 9 8, 23 8, 27 25" />
+              <circle cx="16" cy="10.5" r="1.6" fill="var(--color-warm)" stroke="none" />
+            </svg>
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">
-            Arc<span className="text-[var(--color-accent)]"> Markets</span>
+          <span className="text-[15px] font-semibold tracking-tight leading-none">
+            Arc
+            <span className="text-gradient font-semibold"> Markets</span>
           </span>
         </Link>
 
