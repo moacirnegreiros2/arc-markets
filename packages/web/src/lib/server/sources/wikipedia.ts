@@ -80,15 +80,36 @@ export async function fifaWorldCupSemifinalist(
  * for the 2025-26 season).
  */
 export async function uclWinner(year: number): Promise<string | null> {
-  const wt = await wikitext(`${year}_UEFA_Champions_League_final`);
-  if (!wt) return null;
-  // "'''Winners:''' Paris Saint-Germain" or infobox winner field
-  const m1 = wt.match(/(?:winners?|champion)\s*[:=]\s*(?:\[\[)?([A-Z][A-Za-z .\-']+?)(?:\]\]|\s*\||\n)/i);
-  if (m1) return m1[1].trim();
-  // Sometimes stated as "X won" in intro
-  const s = await summary(`${year}_UEFA_Champions_League_final`);
-  const m2 = s.match(/([A-Z][A-Za-z .\-']+?)\s+won\s+the\s+final/);
-  return m2?.[1]?.trim() ?? null;
+  // Try the season page first — its infobox always has a "champions" field
+  // once the final is played. Falls back to the final's page if missing.
+  const prevYear = year - 1;
+  const seasonPage = `${prevYear}–06_UEFA_Champions_League`.replace(
+    /(\d{4})–(\d{2})/,
+    (_m, a, b) => `${a}–${String(prevYear + 1).slice(2) === b ? b : b}`,
+  );
+  // Simpler: just try common variants.
+  const candidates = [
+    `${String(prevYear).slice(-2)}–${String(year).slice(-2)}_UEFA_Champions_League`,
+    `${prevYear}–${String(year).slice(-2)}_UEFA_Champions_League`,
+    `${year}_UEFA_Champions_League_final`,
+    seasonPage,
+  ];
+  for (const page of candidates) {
+    const wt = await wikitext(page);
+    if (!wt) continue;
+    // Common infobox fields: | champions = / | winners =
+    const infoboxWinner = wt.match(
+      /\|\s*(?:champions?|winners?)\s*=\s*(?:\{\{[^}]*\}\}\s*)?(?:\[\[)?([A-Z][A-Za-z .\-']+?)(?:\|[^\]]*)?(?:\]\]|\n)/i,
+    );
+    if (infoboxWinner) return infoboxWinner[1].trim();
+    // "X won the trophy" / "X defeated Y"
+    const s = await summary(page);
+    const m = s.match(
+      /([A-Z][A-Za-z .\-']+?)\s+(?:won|defeated|beat)\s+/,
+    );
+    if (m) return m[1].trim();
+  }
+  return null;
 }
 
 // ---------- NBA Finals ----------
