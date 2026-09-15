@@ -51,7 +51,18 @@ async function handler(req: Request) {
     );
   }
 
-  const markets = await listAllMarkets();
+  let markets;
+  try {
+    markets = await listAllMarkets();
+  } catch (err) {
+    // Full sweep is heavy; if RPC is unavailable, skip cleanly instead of
+    // 500-ing and triggering an alert. Runs again next day.
+    return NextResponse.json({
+      checkedAt: now.toISOString(),
+      skipped: true,
+      reason: `market list read failed: ${(err as Error).message.split("\n")[0]}`,
+    });
+  }
   const pending = markets.filter((m) => isPendingResolution(m, now));
   const log: LogEntry[] = [];
 
