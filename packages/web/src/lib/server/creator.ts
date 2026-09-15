@@ -239,7 +239,9 @@ const crypto4h: Template = async (now) => {
 };
 
 // Rolling daily-close crypto: today only (1 day).
+// Fires only at 00 UTC so we get one set per day instead of one per tick.
 const cryptoDailyClose: Template = async (now) => {
+  if (now.getUTCHours() !== 0) return [];
   const eods = nextDailyEods(now, 1);
   const out: MarketSpec[] = [];
   const prices: Record<string, number | null> = {};
@@ -270,7 +272,9 @@ const cryptoDailyClose: Template = async (now) => {
 };
 
 // Rolling US ETF close — next 1 trading day (skips weekends).
+// Only fires 13:00 UTC (about market open) so we create once per session.
 const etfDaily: Template = async (now) => {
+  if (now.getUTCHours() !== 13) return [];
   const days = nextTradingDays(now, 1);
   const out: MarketSpec[] = [];
   const closes: Record<string, number | null> = {};
@@ -303,7 +307,9 @@ const etfDaily: Template = async (now) => {
 
 // Rolling big-tech close — next 1 trading day. Uses the existing stockClose
 // resolver (Yahoo Finance) but broadens variety beyond ETFs.
+// Only fires 13:00 UTC so we produce ~4 markets/day (one per ticker).
 const bigTechDaily: Template = async (now) => {
+  if (now.getUTCHours() !== 13) return [];
   const days = nextTradingDays(now, 1);
   const out: MarketSpec[] = [];
   const tickers = ["NVDA", "TSLA", "COIN", "MSTR"];

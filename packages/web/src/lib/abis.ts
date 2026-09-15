@@ -349,6 +349,16 @@ export const ERC1155_ABI = [
     outputs: [{ type: "uint256" }],
   },
   {
+    name: "balanceOfBatch",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "accounts", type: "address[]" },
+      { name: "ids", type: "uint256[]" },
+    ],
+    outputs: [{ type: "uint256[]" }],
+  },
+  {
     name: "isApprovedForAll",
     type: "function",
     stateMutability: "view",
