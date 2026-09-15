@@ -5,16 +5,26 @@ import {
   createWalletClient,
   createPublicClient,
   http,
+  fallback,
   type Address,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { arcTestnet } from "@/config/chains";
+import { arcTestnet, ARC_RPC_URLS } from "@/config/chains";
 
 const ADMIN_KEY = process.env.ADMIN_PRIVATE_KEY as `0x${string}` | undefined;
 
+// Fallback transport: try the primary Arc RPC first, then QuickNode, then
+// Blockdaemon on failure. `rank: false` keeps the order stable (the primary
+// is preferred while healthy) instead of racing latencies. viem retries the
+// same request against the next transport when one errors.
+const rpcTransport = fallback(
+  ARC_RPC_URLS.map((url) => http(url, { timeout: 30_000, retryCount: 1 })),
+  { rank: false, retryCount: 0 },
+);
+
 export const publicClient = createPublicClient({
   chain: arcTestnet,
-  transport: http(arcTestnet.rpcUrls.default.http[0]),
+  transport: rpcTransport,
 });
 
 export function getAdminClient() {
@@ -27,7 +37,7 @@ export function getAdminClient() {
     walletClient: createWalletClient({
       account,
       chain: arcTestnet,
-      transport: http(arcTestnet.rpcUrls.default.http[0]),
+      transport: rpcTransport,
     }),
   };
 }

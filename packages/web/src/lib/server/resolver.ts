@@ -20,14 +20,17 @@ import { fedRateMove, fredYoYAt } from "./sources/fred";
 import { closeOnOrBefore, latestClose } from "./sources/yahoo";
 import { rankOfYear } from "./sources/nasa";
 import { maxTvlInWindow, currentChainTvl } from "./sources/defillama";
+// Sports resolvers hit Wikipedia first (stable, free, no auth). The old
+// ESPN adapter returns 403 in 2026; kept only as historical reference.
 import {
-  fifaWorldCupSemifinalist,
-  soccerTournamentWinner,
-  nbaFinalsWinner,
-  f1SeasonChampion,
-  wimbledonMensWinner,
-  olympicsTopMedalCountry,
-} from "./sources/espn";
+  fifaWorldCupWinner as wpFifaWinner,
+  fifaWorldCupSemifinalist as wpFifaSemi,
+  uclWinner as wpUclWinner,
+  nbaFinalsWinner as wpNbaWinner,
+  wimbledonMensWinner as wpWimbledon,
+  f1SeasonChampion as wpF1,
+  olympicsTopMedalCountry as wpOlympics,
+} from "./sources/wikipedia";
 
 export type ResolutionResult = {
   outcome: 0 | 1 | null; // 0 = YES, 1 = NO, null = needs manual
@@ -314,7 +317,15 @@ const chainTvlReach: Resolver = async (q) => {
   };
 };
 
-// ===================== SPORTS (ESPN) =====================
+// ===================== SPORTS (Wikipedia) =====================
+
+// Match either "Team A" or "Team A wins" loosely — Wikipedia often includes
+// "Defending champion" etc. before the actual name.
+function looseTeamMatch(winner: string, team: string): boolean {
+  const w = winner.toLowerCase().trim();
+  const t = team.toLowerCase().trim();
+  return w.includes(t) || t.includes(w);
+}
 
 // "Will Argentina win the 2026 FIFA World Cup?" — finds the year, the team
 const wcWinner: Resolver = async (q) => {
@@ -322,12 +333,12 @@ const wcWinner: Resolver = async (q) => {
   if (!m) return null;
   const [, team, yearStr] = m;
   const year = parseInt(yearStr);
-  const winner = await soccerTournamentWinner("fifa.world", year);
-  if (!winner) return { outcome: null, reason: `ESPN World Cup ${year} winner not yet known` };
+  const winner = await wpFifaWinner(year);
+  if (!winner) return { outcome: null, reason: `Wikipedia: World Cup ${year} winner not yet known` };
   return {
-    outcome: winner.trim().toLowerCase() === team.trim().toLowerCase() ? 0 : 1,
-    reason: `World Cup ${year} winner per ESPN: ${winner}`,
-    source: "ESPN",
+    outcome: looseTeamMatch(winner, team) ? 0 : 1,
+    reason: `World Cup ${year} winner per Wikipedia: ${winner}`,
+    source: "Wikipedia",
   };
 };
 
@@ -337,12 +348,12 @@ const wcSemifinal: Resolver = async (q) => {
   if (!m) return null;
   const [, team, yearStr] = m;
   const year = parseInt(yearStr);
-  const made = await fifaWorldCupSemifinalist(year, team.trim());
-  if (made == null) return { outcome: null, reason: `ESPN data for ${year} World Cup semifinals not available yet` };
+  const made = await wpFifaSemi(year, team.trim());
+  if (made == null) return { outcome: null, reason: `Wikipedia: ${year} World Cup semifinal data not available yet` };
   return {
     outcome: made ? 0 : 1,
-    reason: `${team.trim()} ${made ? "appears" : "does not appear"} in ${year} World Cup semifinal entries`,
-    source: "ESPN",
+    reason: `${team.trim()} ${made ? "was" : "was not"} in ${year} World Cup semifinals per Wikipedia`,
+    source: "Wikipedia",
   };
 };
 
@@ -352,12 +363,12 @@ const uclWinner: Resolver = async (q) => {
   if (!m) return null;
   const [, team, , yearEndStr] = m;
   const year = 2000 + parseInt(yearEndStr);
-  const winner = await soccerTournamentWinner("uefa.champions", year);
-  if (!winner) return { outcome: null, reason: `ESPN UCL ${year} winner not available yet` };
+  const winner = await wpUclWinner(year);
+  if (!winner) return { outcome: null, reason: `Wikipedia: UCL ${year} winner not available yet` };
   return {
-    outcome: winner.trim().toLowerCase() === team.trim().toLowerCase() ? 0 : 1,
-    reason: `${year} UCL winner per ESPN: ${winner}`,
-    source: "ESPN",
+    outcome: looseTeamMatch(winner, team) ? 0 : 1,
+    reason: `${year} UCL winner per Wikipedia: ${winner}`,
+    source: "Wikipedia",
   };
 };
 
@@ -367,12 +378,12 @@ const nbaFinals: Resolver = async (q) => {
   if (!m) return null;
   const [, team, , yearEndStr] = m;
   const year = 2000 + parseInt(yearEndStr);
-  const winner = await nbaFinalsWinner(year);
-  if (!winner) return { outcome: null, reason: `ESPN NBA Finals ${year} winner not available yet` };
+  const winner = await wpNbaWinner(year);
+  if (!winner) return { outcome: null, reason: `Wikipedia: NBA Finals ${year} winner not available yet` };
   return {
-    outcome: winner.toLowerCase().includes(team.trim().toLowerCase()) ? 0 : 1,
-    reason: `${year} NBA Finals winner per ESPN: ${winner}`,
-    source: "ESPN",
+    outcome: looseTeamMatch(winner, team) ? 0 : 1,
+    reason: `${year} NBA Finals winner per Wikipedia: ${winner}`,
+    source: "Wikipedia",
   };
 };
 
@@ -381,12 +392,12 @@ const f1Champ: Resolver = async (q) => {
   const m = q.match(/will\s+([\w\s]+?)\s+win\s+the\s+(\d{4})\s+f1\s+drivers/i);
   if (!m) return null;
   const [, driver, yearStr] = m;
-  const champ = await f1SeasonChampion(parseInt(yearStr));
-  if (!champ) return { outcome: null, reason: `ESPN F1 ${yearStr} standings not final yet` };
+  const champ = await wpF1(parseInt(yearStr));
+  if (!champ) return { outcome: null, reason: `Wikipedia: F1 ${yearStr} champion not final yet` };
   return {
-    outcome: champ.toLowerCase().includes(driver.trim().toLowerCase()) ? 0 : 1,
-    reason: `${yearStr} F1 champion per ESPN: ${champ}`,
-    source: "ESPN",
+    outcome: looseTeamMatch(champ, driver) ? 0 : 1,
+    reason: `${yearStr} F1 champion per Wikipedia: ${champ}`,
+    source: "Wikipedia",
   };
 };
 
@@ -395,12 +406,12 @@ const wimbledon: Resolver = async (q) => {
   const m = q.match(/will\s+([\w\s]+?)\s+win\s+wimbledon\s+(\d{4})/i);
   if (!m) return null;
   const [, player, yearStr] = m;
-  const w = await wimbledonMensWinner(parseInt(yearStr));
-  if (!w) return { outcome: null, reason: `Wimbledon ${yearStr} winner not yet known via ESPN` };
+  const w = await wpWimbledon(parseInt(yearStr));
+  if (!w) return { outcome: null, reason: `Wikipedia: Wimbledon ${yearStr} winner not yet known` };
   return {
-    outcome: w.toLowerCase().includes(player.trim().toLowerCase()) ? 0 : 1,
-    reason: `Wimbledon ${yearStr} winner per ESPN: ${w}`,
-    source: "ESPN",
+    outcome: looseTeamMatch(w, player) ? 0 : 1,
+    reason: `Wimbledon ${yearStr} winner per Wikipedia: ${w}`,
+    source: "Wikipedia",
   };
 };
 
@@ -409,11 +420,11 @@ const olympicsTop: Resolver = async (q) => {
   const m = q.match(/will\s+([\w\s]+?)\s+top\s+the\s+medal\s+table\s+at[^?]*?(\d{4})/i);
   if (!m) return null;
   const [, country, yearStr] = m;
-  const top = await olympicsTopMedalCountry(parseInt(yearStr));
-  if (!top) return { outcome: null, reason: `ESPN Olympics ${yearStr} medal table not available` };
+  const top = await wpOlympics(parseInt(yearStr), "winter");
+  if (!top) return { outcome: null, reason: `Wikipedia: ${yearStr} Winter Olympics medal table not available` };
   return {
-    outcome: top.toLowerCase().includes(country.trim().toLowerCase()) ? 0 : 1,
-    reason: `${yearStr} Olympics top medal country per ESPN: ${top}`,
+    outcome: looseTeamMatch(top, country) ? 0 : 1,
+    reason: `${yearStr} Olympics top medal country per Wikipedia: ${top}`,
     source: "ESPN",
   };
 };

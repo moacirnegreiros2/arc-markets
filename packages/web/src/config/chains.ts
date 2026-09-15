@@ -1,5 +1,16 @@
 import { defineChain } from "viem";
 
+// Public RPCs for Arc Testnet (from chainid.network). QuickNode and
+// Blockdaemon act as fallbacks — the primary endpoint occasionally throttles
+// aggregate3 payloads with "Request exceeds defined limit". viem's fallback
+// transport (used in admin.ts) rotates among these on error, so a hiccup on
+// one node doesn't take the whole tick down.
+export const ARC_RPC_URLS = [
+  "https://rpc.testnet.arc.network",
+  "https://rpc.quicknode.testnet.arc.network",
+  "https://rpc.blockdaemon.testnet.arc.network",
+] as const;
+
 export const arcTestnet = defineChain({
   id: 5042002,
   name: "Arc Testnet",
@@ -9,7 +20,7 @@ export const arcTestnet = defineChain({
     symbol: "USDC",
   },
   rpcUrls: {
-    default: { http: ["https://rpc.testnet.arc.network"] },
+    default: { http: [...ARC_RPC_URLS] },
   },
   blockExplorers: {
     default: {

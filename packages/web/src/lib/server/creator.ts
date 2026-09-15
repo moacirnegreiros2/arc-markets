@@ -201,10 +201,14 @@ function nextTradingDays(now: Date, count: number): Date[] {
   return out;
 }
 
-// Rolling 4-hour BTC/ETH/SOL: next 2 windows (8h coverage).
-// Halved from 4 slots — keeps creation rate sustainable.
+// Rolling 4-hour BTC/ETH/SOL: only next slot, and only fires at hours
+// divisible by 4 (00/04/08/12/16/20 UTC). Previously produced up to 6
+// markets every hour — over months this inflated the resolved backlog to
+// thousands with no meaningful liquidity. Now it targets ~3 markets every
+// 4 hours = 18/day instead of ~72/day.
 const crypto4h: Template = async (now) => {
-  const slots = next4hSlots(now, 2);
+  if (now.getUTCHours() % 4 !== 0) return [];
+  const slots = next4hSlots(now, 1);
   const out: MarketSpec[] = [];
   const prices: Record<string, number | null> = {};
   for (const sym of ["BTC", "ETH", "SOL"]) {
