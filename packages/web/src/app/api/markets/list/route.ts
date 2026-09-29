@@ -96,7 +96,7 @@ export async function GET(req: Request) {
       {
         headers: {
           "cache-control":
-            "public, s-maxage=20, stale-while-revalidate=60",
+            "public, s-maxage=60, stale-while-revalidate=180",
         },
       },
     );

@@ -71,9 +71,11 @@ function useAllMarkets() {
       if (!r.ok) throw new Error("Failed to load markets");
       return r.json();
     },
-    // Full sweep is expensive on the server; keep cache generous.
+    // Full sweep is expensive on the server; keep cache generous but
+    // refetch on window focus so users see fresh balances after they trade.
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -190,7 +192,12 @@ function PositionCard({
 
 export default function PortfolioPage() {
   const { address: user } = useAccount();
-  const { data: apiData, isLoading: loadingMarkets } = useAllMarkets();
+  const {
+    data: apiData,
+    isLoading: loadingMarkets,
+    isFetching: fetchingMarkets,
+    refetch: refetchMarkets,
+  } = useAllMarkets();
   const markets = apiData?.markets ?? [];
 
   // Pre-compute all token IDs (2 per market).
@@ -272,11 +279,22 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Portfolio</h1>
-        <p className="text-[var(--color-text-secondary)] mt-1">
-          Your positions across all markets ({markets.length} scanned).
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Portfolio</h1>
+          <p className="text-[var(--color-text-secondary)] mt-1">
+            Your positions across all markets ({markets.length} scanned).
+          </p>
+        </div>
+        <button
+          onClick={() => refetchMarkets()}
+          disabled={fetchingMarkets}
+          className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border border-[var(--color-border-1)] bg-[var(--color-bg-2)] hover:border-[var(--color-border-2)] disabled:opacity-50 transition-colors"
+          title="Re-scan for new positions"
+        >
+          <span className={fetchingMarkets ? "animate-spin inline-block" : "inline-block"}>↻</span>
+          {fetchingMarkets ? "Refreshing…" : "Refresh"}
+        </button>
       </div>
 
       {loading && positions.length === 0 ? (

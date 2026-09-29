@@ -52,8 +52,8 @@ const addressCache = new Map<`0x${string}`, Address>(); // marketId -> address
 const immutableCache = new Map<Address, Immutable>();
 const summariesCache: { at: number; value: MarketSummary[] } = { at: 0, value: [] };
 
-const IDS_TTL_MS = 30_000; // getMarketIds() is cheap; short refresh
-const SUMMARIES_TTL_MS = 15_000;
+const IDS_TTL_MS = 60_000; // getMarketIds() is cheap but Arc RPC hiccups a lot
+const SUMMARIES_TTL_MS = 60_000; // 4x longer — most users hit warm cache
 
 // Arc testnet RPC rate-limits aggressively per IP (~1 req/s effective).
 // We keep aggregate3 chunks fat (fewer round-trips) and only add a small
